@@ -41,16 +41,8 @@ export function CartItem({ item }: CartItemProps) {
   return (
     <div className="flex gap-4 py-4">
       {/* Image */}
-      <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-md bg-muted">
-        {item.thumbnail && (
-          <Image
-            src={item.thumbnail}
-            alt={item.title}
-            fill
-            className="object-cover"
-            sizes="96px"
-          />
-        )}
+      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md bg-muted">
+        {item.thumbnail && <Image src={item.thumbnail} alt={item.title} fill className="object-cover" sizes="96px" />}
       </div>
 
       {/* Details */}
@@ -73,11 +65,7 @@ export function CartItem({ item }: CartItemProps) {
               <Minus className="h-4 w-4" />
             </Button>
             <span className="w-8 text-center">
-              {isUpdating ? (
-                <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-              ) : (
-                item.quantity
-              )}
+              {isUpdating ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : item.quantity}
             </span>
             <Button
               variant="outline"
@@ -92,13 +80,8 @@ export function CartItem({ item }: CartItemProps) {
 
           {/* Price & Remove */}
           <div className="flex items-center gap-4">
-            <span className="font-medium">{item.total} EGP</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleRemove}
-              disabled={isUpdating}
-            >
+            <span className="font-medium">{item.unit_price * item.quantity} EGP</span>
+            <Button variant="ghost" size="icon" onClick={handleRemove} disabled={isUpdating}>
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
@@ -107,4 +90,3 @@ export function CartItem({ item }: CartItemProps) {
     </div>
   );
 }
-
