@@ -1,6 +1,6 @@
 "use client";
 
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import { useCallback, useEffect, useState } from "react";
 import { api, fetcher, DEFAULT_REGION_ID } from "@/lib/api";
 import type {
@@ -68,7 +68,9 @@ export function useCart() {
         `/store/carts/${cart.id}/line-items`,
         { variant_id: variantId, quantity }
       );
-      mutate({ cart: response.data.cart });
+      // Update cache locally and globally to ensure all instances update
+      mutate({ cart: response.data.cart }, { revalidate: false });
+      globalMutate(`/store/carts/${cart.id}`, { cart: response.data.cart }, { revalidate: false });
       return response.data.cart;
     },
     [getOrCreateCart, mutate]
