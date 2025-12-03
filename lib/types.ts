@@ -1,0 +1,460 @@
+// Store Settings
+export interface StoreSettings {
+  id: string;
+  metadata: {
+    tags_boxes?: {
+      box1?: { title: string; tagIds: string[] };
+      box2?: { title: string; tagIds: string[] };
+      box3?: { title: string; tagIds: string[] };
+    };
+    slider_images?: { url: string; link: string }[];
+    secondary_slider_images?: { url: string; link: string }[];
+    flash_sale_tag_id?: string;
+    flash_sale_end_time?: string;
+    high_rated_tag_id?: string;
+    best_seller_tag_id?: string;
+    new_arrival_tag_id?: string;
+    recommended_tag_id?: string;
+    all_you_want_tag_id?: string;
+    make_up_category_id?: string;
+    makeup_best_seller_tag_id?: string;
+    sheglam_brand_id?: string;
+  };
+}
+
+// Product Tag
+export interface ProductTag {
+  id: string;
+  value: string;
+  metadata?: {
+    thumbnail?: string;
+  } | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+// Brand
+export interface Brand {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  products?: Product[];
+}
+
+// Category
+export interface Category {
+  id: string;
+  name: string;
+  description: string;
+  handle: string;
+  mpath?: string;
+  is_active?: boolean;
+  is_internal?: boolean;
+  rank: number;
+  metadata?: {
+    thumbnail?: string;
+    best_offers?: string;
+    best_sellers?: string;
+    category_slider_images?: { url: string; link: string }[];
+    category_slider_images_count?: number;
+  } | null;
+  parent_category_id: string | null;
+  parent_category?: Category | null;
+  category_children?: Category[];
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+// Product Option Value
+export interface ProductOptionValue {
+  id: string;
+  value: string;
+  metadata: Record<string, unknown> | null;
+  option_id: string;
+  option?: ProductOption;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+// Product Option
+export interface ProductOption {
+  id: string;
+  title: string;
+  metadata: Record<string, unknown> | null;
+  product_id: string;
+  values: ProductOptionValue[];
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+// Product Image
+export interface ProductImage {
+  id: string;
+  url: string;
+  metadata: Record<string, unknown> | null;
+  rank: number;
+  product_id: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+// Calculated Price
+export interface CalculatedPrice {
+  id: string;
+  is_calculated_price_price_list: boolean;
+  is_calculated_price_tax_inclusive: boolean;
+  calculated_amount: number;
+  raw_calculated_amount: { value: string; precision: number };
+  is_original_price_price_list: boolean;
+  is_original_price_tax_inclusive: boolean;
+  original_amount: number;
+  raw_original_amount: { value: string; precision: number };
+  currency_code: string;
+  calculated_price: {
+    id: string;
+    price_list_id: string | null;
+    price_list_type: string | null;
+    min_quantity: number | null;
+    max_quantity: number | null;
+  };
+  original_price: {
+    id: string;
+    price_list_id: string | null;
+    price_list_type: string | null;
+    min_quantity: number | null;
+    max_quantity: number | null;
+  };
+}
+
+// Product Variant
+export interface ProductVariant {
+  id: string;
+  title: string;
+  sku: string | null;
+  barcode: string | null;
+  ean: string | null;
+  upc: string | null;
+  allow_backorder: boolean;
+  manage_inventory: boolean;
+  hs_code: string | null;
+  origin_country: string | null;
+  mid_code: string | null;
+  material: string | null;
+  weight: string | null;
+  length: string | null;
+  height: string | null;
+  width: string | null;
+  metadata?: {
+    images?: { url: string }[];
+    thumbnail?: string;
+  } | null;
+  variant_rank: number;
+  product_id: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  options: ProductOptionValue[];
+  calculated_price: CalculatedPrice;
+  inventory_quantity?: number;
+}
+
+// Review
+export interface Review {
+  id: string;
+  rating: number;
+  title: string;
+  description: string;
+  image?: string | null;
+  approved_at: string | null;
+  response: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  customer?: {
+    id: string;
+    first_name?: string;
+    last_name?: string;
+  };
+}
+
+// Collection
+export interface Collection {
+  id: string;
+  title: string;
+  handle: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+// Sales
+export interface ProductSales {
+  id: string;
+  sales: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+// Product
+export interface Product {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  handle: string;
+  is_giftcard: boolean;
+  discountable: boolean;
+  thumbnail: string | null;
+  collection_id: string | null;
+  type_id: string | null;
+  weight: string | null;
+  length: string | null;
+  height: string | null;
+  width: string | null;
+  hs_code: string | null;
+  origin_country: string | null;
+  mid_code: string | null;
+  material: string | null;
+  metadata?: {
+    how_to_use?: string;
+  } | null;
+  created_at: string;
+  updated_at: string;
+  type: unknown | null;
+  collection?: Collection | null;
+  options: ProductOption[];
+  tags: ProductTag[];
+  images: ProductImage[];
+  variants: ProductVariant[];
+  categories?: Category[];
+  brand?: Brand | null;
+  reviews?: Review[];
+  sales?: ProductSales | null;
+}
+
+// Cart Item
+export interface CartItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  thumbnail: string | null;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  subtotal: number;
+  variant_id: string;
+  product_id: string;
+  adjustments?: { amount: number; code: string }[];
+}
+
+// Address
+export interface Address {
+  id?: string;
+  first_name: string;
+  last_name: string;
+  address_1: string;
+  address_2?: string;
+  company?: string;
+  postal_code?: string;
+  city: string;
+  country_code: string;
+  province?: string;
+  phone: string;
+}
+
+// Shipping Method
+export interface ShippingMethod {
+  id: string;
+  name: string;
+  amount: number;
+}
+
+// Shipping Option
+export interface ShippingOption {
+  id: string;
+  name: string;
+  price_type: string;
+  calculated_price: {
+    calculated_amount: number;
+    currency_code: string;
+  };
+  amount: number;
+  is_tax_inclusive: boolean;
+  insufficient_inventory: boolean;
+}
+
+// Promotion
+export interface Promotion {
+  id: string;
+  code: string;
+  is_automatic: boolean;
+  type: string;
+  status: string;
+  application_method: {
+    type: string;
+    value: number;
+  };
+}
+
+// Cart
+export interface Cart {
+  id: string;
+  currency_code: string;
+  email: string | null;
+  region_id: string;
+  total: number;
+  subtotal: number;
+  discount_total?: number;
+  item_total?: number;
+  shipping_total?: number;
+  items: CartItem[];
+  shipping_methods: ShippingMethod[];
+  shipping_address: Address | null;
+  billing_address: Address | null;
+  promotions: Promotion[];
+  customer_id?: string;
+}
+
+// Payment Provider
+export interface PaymentProvider {
+  id: string;
+  is_enabled: boolean;
+}
+
+// Payment Session
+export interface PaymentSession {
+  id: string;
+  currency_code: string;
+  provider_id: string;
+  status: string;
+  amount: number;
+  data?: {
+    cartId?: string;
+    checkoutUrl?: string;
+    invoiceId?: string;
+    invoiceKey?: string;
+    returnUrl?: string;
+  };
+}
+
+// Payment Collection
+export interface PaymentCollection {
+  id: string;
+  currency_code: string;
+  amount: number;
+  status?: string;
+  payment_sessions: PaymentSession[];
+}
+
+// Order
+export interface Order {
+  id: string;
+  status: string;
+  display_id: number;
+  currency_code: string;
+  email: string;
+  total: number;
+  subtotal: number;
+  discount_total: number;
+  item_total: number;
+  shipping_total: number;
+  items: CartItem[];
+  shipping_address: Address;
+  billing_address: Address;
+  shipping_methods: ShippingMethod[];
+  payment_collections: PaymentCollection[];
+}
+
+// API Responses
+export interface SettingsResponse {
+  id: string;
+  metadata: StoreSettings["metadata"];
+}
+
+export interface ProductTagsResponse {
+  product_tags: ProductTag[];
+  count: number;
+  offset: number;
+  limit: number;
+}
+
+export interface ProductsResponse {
+  products: Product[];
+  count?: number;
+  offset?: number;
+  limit?: number;
+}
+
+export interface ProductResponse {
+  product: Product;
+}
+
+export interface CategoriesResponse {
+  product_categories: Category[];
+  count: number;
+  offset: number;
+  limit: number;
+}
+
+export interface CategoryResponse {
+  product_category: Category;
+}
+
+export interface BrandsResponse {
+  brands: Brand[];
+}
+
+export interface BrandResponse {
+  brand: Brand;
+}
+
+export interface FreeShippingThresholdResponse {
+  threshold: string | null;
+}
+
+export interface SliderImagesResponse {
+  images: { url: string; link: string }[];
+  count: number;
+}
+
+export interface CartResponse {
+  cart: Cart;
+}
+
+export interface ShippingOptionsResponse {
+  shipping_options: ShippingOption[];
+}
+
+export interface PaymentProvidersResponse {
+  payment_providers: PaymentProvider[];
+  count: number;
+}
+
+export interface PaymentCollectionResponse {
+  payment_collection: PaymentCollection;
+}
+
+export interface OrderResponse {
+  type: string;
+  order: Order;
+}
+
+export interface TogetherResponse {
+  products: Product[];
+}
+
+export interface PromotionsResponse {
+  promotions: Promotion[];
+}
+

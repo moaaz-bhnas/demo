@@ -1,0 +1,52 @@
+## Project Rules for Shopyneer
+
+- **Design tokens**
+
+  - **Border radius**: Always use `rounded-md` (8px) for all components (buttons, cards, inputs, modals). Only use `rounded-full` for badges/pills, or other values for specific design requirements.
+  - **Spacing**:
+    - Gaps: `gap-2` (8px) for tight groups, `gap-4` (16px) standard, `gap-6` (24px) sections, `gap-8` (32px) major sections.
+    - Padding: `p-3` (12px) compact, `p-4` (16px) buttons/cards, `p-6` (24px) containers.
+    - Margins: same scale as gaps (`m-2`, `m-4`, `m-6`, `m-8`).
+    - Never use arbitrary spacing values; stick to this scale.
+  - **Typography**: Use Tailwind font size tokens (`text-sm`, `text-base`, `text-lg`, etc.) consistently.
+  - **Colors**: Use design system tokens (`bg-muted`, `border-input`, `text-muted-foreground`, etc.) instead of raw hex values.
+
+- **Naming conventions**
+
+  - All file and folder names must use **kebab-case** (e.g. `product-card.tsx`, `product-list`, `use-products.ts`).
+  - Never use `camelCase` or `PascalCase` for file or folder names.
+  - React components inside those files should use `PascalCase` (e.g. `ProductCard`).
+
+- **Component structure**
+
+  - **Always prefer shadcn/ui components** when available. Use shadcn components (Button, Card, Input, Dialog, etc.) instead of building custom components from scratch.
+  - Keep components small and focused; prefer composition over large "god" components.
+  - Group related components into their own folder (e.g. `product/` with `product-card.tsx`, `product-list.tsx`, `product-filters.tsx`).
+  - Extract reusable UI pieces (buttons, cards, list items, badges, etc.) into the shared `components` folder.
+
+- **Design philosophy**
+
+  - **Keep the design minimal and simple**. Avoid unnecessary visual complexity, excessive animations, or decorative elements that don't serve a functional purpose.
+  - Prioritize clarity and usability over visual flair. Use whitespace effectively and maintain a clean, uncluttered interface.
+
+- **URL state management**
+
+  - Use `nuqs` for all URL/query-string state (filters, selected variant, pagination, sorting, etc.).
+  - Do not manipulate `URLSearchParams` directly for application state.
+
+- **Data fetching**
+
+  - All network requests from the UI are **client-side** and use `swr` (or wrappers) for caching and revalidation.
+  - Expose domain-specific hooks like `use-products`, `use-categories`, `use-cart`, etc. instead of calling `useSWR` directly in components.
+  - Centralize fetcher logic (URLs, headers, error handling) in a shared API layer.
+
+- **Loading & skeletons**
+
+  - **Never allow layout shifts**. Layout shifts must be prevented at all times to ensure a smooth user experience.
+  - Any component that relies on an API request must have a matching skeleton using shadcn's `Skeleton` component.
+  - All skeleton components live in `components/skeleton/` and are named after their counterpart (e.g. `product-card-skeleton.tsx` for `product-card.tsx`).
+  - Skeletons must mirror the exact layout and dimensions of the loaded component to prevent layout shifts. Match heights, widths, spacing, and structure precisely.
+
+- **State & UX**
+  - Prefer local React state for presentational concerns and `nuqs` for URL-driven state.
+  - Every data-fetching view must cover loading, error, and empty states.
