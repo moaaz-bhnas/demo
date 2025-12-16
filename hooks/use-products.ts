@@ -9,10 +9,11 @@ interface UseProductsOptions {
   categoryId?: string;
   query?: string;
   limit?: number;
+  enabled?: boolean; // Skip fetching when false
 }
 
 export function useProducts(options: UseProductsOptions = {}) {
-  const { tagId, categoryId, query, limit } = options;
+  const { tagId, categoryId, query, limit, enabled = true } = options;
 
   const params = new URLSearchParams();
   params.append("fields", "*variants.calculated_price,*sales");
@@ -35,17 +36,16 @@ export function useProducts(options: UseProductsOptions = {}) {
 
   const url = `/store/products?${params.toString()}`;
 
-  const { data, error, isLoading, mutate } = useSWR<ProductsResponse>(
-    url,
-    fetcher
-  );
+  // Don't fetch if disabled
+  const shouldFetch = enabled;
+
+  const { data, error, isLoading, mutate } = useSWR<ProductsResponse>(shouldFetch ? url : null, fetcher);
 
   return {
     products: data?.products ?? [],
     count: data?.count ?? 0,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     isError: error,
     mutate,
   };
 }
-

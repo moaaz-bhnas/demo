@@ -8,6 +8,7 @@ import { ProductGridSkeleton } from "@/components/skeleton/product-card-skeleton
 import { WithSkeleton } from "@/components/with-skeleton";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { useBrand } from "@/hooks/use-brands";
+import { useProducts } from "@/hooks/use-products";
 
 interface BrandPageProps {
   params: Promise<{ id: string }>;
@@ -15,7 +16,13 @@ interface BrandPageProps {
 
 export default function BrandPage({ params }: BrandPageProps) {
   const { id } = use(params);
-  const { brand, isLoading } = useBrand(id);
+  const { brand, isLoading: isBrandLoading } = useBrand(id);
+  const { products, isLoading: isProductsLoading } = useProducts({
+    tagId: brand?.tag_id,
+    enabled: !!brand?.tag_id, // Only fetch when brand has a tag_id
+  });
+
+  const isLoading = isBrandLoading || (brand?.tag_id && isProductsLoading);
 
   return (
     <Container>
@@ -65,25 +72,21 @@ export default function BrandPage({ params }: BrandPageProps) {
               <div>
                 <h1 className="text-2xl font-bold sm:text-3xl">{brand.name}</h1>
                 {brand.description && (
-                  <p className="mt-2 text-muted-foreground">
-                    {brand.description}
-                  </p>
+                  <p className="mt-2 text-muted-foreground">{brand.description}</p>
                 )}
               </div>
             </div>
 
             {/* Products */}
             <div>
-              <h2 className="mb-6 text-lg font-semibold">
-                Products {brand.products && `(${brand.products.length})`}
-              </h2>
+              <h2 className="mb-6 text-lg font-semibold">Products ({products.length})</h2>
 
-              {brand.products && brand.products.length > 0 ? (
-                <ProductGrid products={brand.products} />
+              {products.length > 0 ? (
+                <ProductGrid products={products} />
               ) : (
                 <div className="py-12 text-center">
                   <p className="text-muted-foreground">
-                    No products found for this brand
+                    {brand.tag_id ? "No products found for this brand" : "This brand has no associated products"}
                   </p>
                 </div>
               )}
@@ -94,4 +97,3 @@ export default function BrandPage({ params }: BrandPageProps) {
     </Container>
   );
 }
-

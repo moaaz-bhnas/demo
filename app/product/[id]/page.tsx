@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useState, useEffect, useMemo } from "react";
-import { Star } from "lucide-react";
+import { Heart, Star } from "lucide-react";
 import { Container } from "@/components/container";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { VariantSelector } from "@/components/product/variant-selector";
@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { useProduct, useBoughtTogether } from "@/hooks/use-product";
+import { useWishlist } from "@/hooks/use-wishlist";
 import type { ProductVariant } from "@/lib/types";
 
 interface ProductPageProps {
@@ -27,6 +28,7 @@ export default function ProductPage({ params }: ProductPageProps) {
   const { products: boughtTogether } = useBoughtTogether(product?.id ?? "");
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const { isInWishlist, addItem, getWishlistItemId, removeItem } = useWishlist();
 
   // Set default variant when product loads
   useEffect(() => {
@@ -76,6 +78,25 @@ export default function ProductPage({ params }: ProductPageProps) {
   }, [product?.reviews]);
 
   const category = product?.categories?.[0];
+
+  const inWishlist = selectedVariant ? isInWishlist(selectedVariant.id) : false;
+
+  const handleToggleWishlist = async () => {
+    if (!selectedVariant) return;
+
+    try {
+      if (inWishlist) {
+        const itemId = getWishlistItemId(selectedVariant.id);
+        if (itemId) {
+          await removeItem(itemId);
+        }
+      } else {
+        await addItem(selectedVariant.id);
+      }
+    } catch {
+      // Ignore errors (e.g. unauthenticated); UI elsewhere handles auth flows
+    }
+  };
 
   return (
     <>
@@ -174,8 +195,26 @@ export default function ProductPage({ params }: ProductPageProps) {
                     onVariantChange={setSelectedVariant}
                   />
 
-                  {/* Add to Cart */}
-                  <AddToCartButton variant={selectedVariant} />
+                  {/* Actions */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <AddToCartButton variant={selectedVariant} />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleToggleWishlist}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-input bg-background text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                      aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
+                    >
+                      <Heart
+                        className={`h-5 w-5 ${
+                          inWishlist
+                            ? "fill-red-500 text-red-500"
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                    </button>
+                  </div>
 
                   {/* SKU */}
                   {selectedVariant?.sku && (

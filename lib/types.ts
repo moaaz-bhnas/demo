@@ -40,6 +40,7 @@ export interface Brand {
   name: string;
   description: string;
   image: string;
+  tag_id?: string;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -458,3 +459,170 @@ export interface PromotionsResponse {
   promotions: Promotion[];
 }
 
+// Customer
+export interface Customer {
+  id: string;
+  email: string;
+  company_name: string | null;
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  metadata: Record<string, unknown> | null;
+  has_account: boolean;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  addresses?: CustomerAddress[];
+}
+
+// Customer Address
+export interface CustomerAddress {
+  id: string;
+  address_name: string | null;
+  is_default_shipping: boolean;
+  is_default_billing: boolean;
+  company: string | null;
+  first_name: string;
+  last_name: string;
+  address_1: string;
+  address_2: string | null;
+  city: string;
+  country_code: string;
+  province: string | null;
+  postal_code: string | null;
+  phone: string | null;
+  metadata: Record<string, unknown> | null;
+  customer_id: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+// Wishlist Item
+export interface WishlistItem {
+  id: string;
+  product_variant_id: string;
+  wishlist_id: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  product_variant: {
+    id: string;
+    title: string;
+    product_id: string;
+    metadata?: {
+      thumbnail?: string;
+      images?: { url: string }[];
+    } | null;
+    prices?: {
+      id: string;
+      currency_code: string;
+      amount: number;
+    }[];
+    product?: {
+      id: string;
+      title: string;
+      handle: string;
+      thumbnail: string | null;
+    };
+  };
+}
+
+// Wishlist
+export interface Wishlist {
+  id: string;
+  customer_id: string;
+  sales_channel_id: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  items: WishlistItem[];
+}
+
+// Order Item (for orders list)
+export interface OrderItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  thumbnail: string | null;
+  variant_id: string;
+  product_id: string;
+  product_title: string;
+  product_handle: string;
+  unit_price: number;
+  quantity: number;
+  subtotal: number;
+  total: number;
+  original_total: number;
+  discount_total: number;
+  adjustments?: { code: string; amount: number }[];
+  variant?: {
+    id: string;
+    title: string;
+    product?: {
+      id: string;
+      title: string;
+      handle: string;
+    };
+  };
+}
+
+// Customer Order
+export interface CustomerOrder {
+  id: string;
+  status: string;
+  display_id: number;
+  currency_code: string;
+  email?: string;
+  total: number;
+  subtotal?: number;
+  discount_total?: number;
+  shipping_total?: number;
+  item_total?: number;
+  payment_status: string;
+  fulfillment_status: string;
+  created_at: string;
+  updated_at: string;
+  items: OrderItem[];
+  shipping_address?: Address;
+  billing_address?: Address;
+  shipping_methods?: ShippingMethod[];
+  payment_collections?: PaymentCollection[];
+  fulfillments?: unknown[];
+}
+
+// Auth Response
+export interface AuthResponse {
+  token: string;
+}
+
+// Customer Response
+export interface CustomerResponse {
+  customer: Customer;
+}
+
+// Wishlist Response
+export interface WishlistResponse {
+  wishlist: Wishlist;
+}
+
+// Orders Response
+export interface OrdersResponse {
+  orders: CustomerOrder[];
+  count: number;
+  offset: number;
+  limit: number;
+}
+
+// Single Order Response
+export interface SingleOrderResponse {
+  order: CustomerOrder;
+}
+
+// Addresses Response
+export interface AddressesResponse {
+  addresses: CustomerAddress[];
+  count: number;
+  offset: number;
+  limit: number;
+}
