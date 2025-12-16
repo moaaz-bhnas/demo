@@ -6,7 +6,13 @@ import { Container } from "@/components/container";
 import { ProductGrid } from "@/components/product/product-grid";
 import { ProductGridSkeleton } from "@/components/skeleton/product-card-skeleton";
 import { WithSkeleton } from "@/components/with-skeleton";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { useBrand } from "@/hooks/use-brands";
 import { useProducts } from "@/hooks/use-products";
 
@@ -40,7 +46,7 @@ export default function BrandPage({ params }: BrandPageProps) {
       </Breadcrumb>
 
       <WithSkeleton
-        isLoading={isLoading}
+        isLoading={Boolean(isLoading)}
         skeleton={
           <div className="space-y-8">
             <div className="flex items-center gap-6">
@@ -60,20 +66,12 @@ export default function BrandPage({ params }: BrandPageProps) {
             <div className="mb-8 flex items-center gap-6">
               {brand.image && (
                 <div className="relative h-24 w-24 overflow-hidden rounded-md bg-muted">
-                  <Image
-                    src={brand.image}
-                    alt={brand.name}
-                    fill
-                    className="object-cover"
-                    sizes="96px"
-                  />
+                  <Image src={brand.image} alt={brand.name} fill className="object-cover" sizes="96px" />
                 </div>
               )}
               <div>
                 <h1 className="text-2xl font-bold sm:text-3xl">{brand.name}</h1>
-                {brand.description && (
-                  <p className="mt-2 text-muted-foreground">{brand.description}</p>
-                )}
+                {brand.description && <p className="mt-2 text-muted-foreground">{brand.description}</p>}
               </div>
             </div>
 
