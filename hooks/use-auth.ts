@@ -4,8 +4,25 @@ import React, { createContext, useContext, useCallback, useEffect, useState, use
 import { api, BASE_URL, API_KEY } from "@/lib/api";
 import type { AuthResponse, Customer, CustomerResponse } from "@/lib/types";
 import axios, { AxiosInstance } from "axios";
+import { decodeToken } from "react-jwt";
 
 const AUTH_TOKEN_KEY = "shopyneer_auth_token";
+
+interface DecodedToken {
+  actor_id: string;
+  user_metadata?: {
+    email?: string;
+    name?: string;
+    given_name?: string;
+    family_name?: string;
+    picture?: string;
+  };
+}
+
+interface GoogleAuthResponse {
+  location?: string;
+  token?: string;
+}
 
 function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -44,6 +61,8 @@ interface AuthContextType {
   isLoading: boolean;
   register: (email: string, password: string, firstName: string, lastName: string, phone?: string) => Promise<Customer>;
   login: (email: string, password: string) => Promise<Customer>;
+  loginWithGoogle: () => Promise<string | null>;
+  handleGoogleCallback: (queryParams: Record<string, string>) => Promise<Customer>;
   logout: () => void;
   requestPasswordReset: (email: string) => Promise<void>;
   updatePassword: (email: string, password: string, resetToken: string) => Promise<void>;
@@ -147,6 +166,124 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return customerResponse.data.customer;
   }, []);
 
+  // Google OAuth: Step 1 - Get redirect URL
+  const loginWithGoogle = useCallback(async (): Promise<string | null> => {
+    try {
+      const response = await api.post<GoogleAuthResponse>("/auth/customer/google", {});
+
+      // If location is returned, redirect to Google
+      if (response.data.location) {
+        return response.data.location;
+      }
+
+      // If token is returned, customer was previously authenticated
+      if (response.data.token) {
+        const authToken = response.data.token;
+        setStoredToken(authToken);
+        setToken(authToken);
+        await fetchCustomer(authToken);
+        return null; // No redirect needed
+      }
+
+      throw new Error("Invalid response from Google auth");
+    } catch (error) {
+      console.error("Google login error:", error);
+      throw error;
+    }
+  }, [fetchCustomer]);
+
+  // Google OAuth: Step 2 - Handle callback from Google
+  const handleGoogleCallback = useCallback(
+    async (queryParams: Record<string, string>): Promise<Customer> => {
+      // Send callback to validate with Medusa
+      const callbackResponse = await api.post<AuthResponse>("/auth/customer/google/callback", queryParams);
+      const authToken = callbackResponse.data.token;
+
+      // Decode token to check if customer exists
+      const decoded = decodeToken<DecodedToken>(authToken);
+
+      if (!decoded) {
+        throw new Error("Failed to decode token");
+      }
+
+      // If actor_id is empty, customer needs to be created
+      const shouldCreateCustomer = !decoded.actor_id || decoded.actor_id === "";
+
+      if (shouldCreateCustomer) {
+        // Create customer with data from Google
+        const email = decoded.user_metadata?.email;
+        const firstName = decoded.user_metadata?.given_name || decoded.user_metadata?.name?.split(" ")[0] || "";
+        const lastName = decoded.user_metadata?.family_name || decoded.user_metadata?.name?.split(" ").slice(1).join(" ") || "";
+
+        if (!email) {
+          throw new Error("Email not provided by Google");
+        }
+
+        // Create customer
+        await axios.post(
+          `${BASE_URL}/store/customers`,
+          {
+            email,
+            first_name: firstName,
+            last_name: lastName,
+          },
+          {
+            headers: {
+              "x-publishable-api-key": API_KEY,
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+
+        // Refresh token to get updated token with customer data
+        const refreshResponse = await axios.post<AuthResponse>(
+          `${BASE_URL}/auth/token/refresh`,
+          {},
+          {
+            headers: {
+              "x-publishable-api-key": API_KEY,
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+
+        const finalToken = refreshResponse.data.token;
+        setStoredToken(finalToken);
+        setToken(finalToken);
+
+        // Fetch customer data
+        const customerResponse = await axios.get<CustomerResponse>(`${BASE_URL}/store/customers/me`, {
+          headers: {
+            "x-publishable-api-key": API_KEY,
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${finalToken}`,
+          },
+        });
+
+        setCustomer(customerResponse.data.customer);
+        return customerResponse.data.customer;
+      }
+
+      // Customer already exists, just store token and fetch data
+      setStoredToken(authToken);
+      setToken(authToken);
+
+      const customerResponse = await axios.get<CustomerResponse>(`${BASE_URL}/store/customers/me`, {
+        headers: {
+          "x-publishable-api-key": API_KEY,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      setCustomer(customerResponse.data.customer);
+      return customerResponse.data.customer;
+    },
+    []
+  );
+
   const logout = useCallback(() => {
     clearStoredToken();
     setToken(null);
@@ -181,6 +318,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading: !isInitialized || isLoading,
       register,
       login,
+      loginWithGoogle,
+      handleGoogleCallback,
       logout,
       requestPasswordReset,
       updatePassword,
@@ -193,6 +332,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       register,
       login,
+      loginWithGoogle,
+      handleGoogleCallback,
       logout,
       requestPasswordReset,
       updatePassword,
