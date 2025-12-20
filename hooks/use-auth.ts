@@ -12,9 +12,9 @@ interface DecodedToken {
   actor_id: string;
   user_metadata?: {
     email?: string;
-    name?: string;
     given_name?: string;
     family_name?: string;
+    name?: string;
     picture?: string;
   };
 }
@@ -22,6 +22,12 @@ interface DecodedToken {
 interface GoogleAuthResponse {
   location?: string;
   token?: string;
+}
+
+// Result from validating Google callback
+export interface GoogleCallbackResult {
+  token: string;
+  needsCustomerCreation: boolean;
 }
 
 function getStoredToken(): string | null {
@@ -62,7 +68,9 @@ interface AuthContextType {
   register: (email: string, password: string, firstName: string, lastName: string, phone?: string) => Promise<Customer>;
   login: (email: string, password: string) => Promise<Customer>;
   loginWithGoogle: () => Promise<string | null>;
-  handleGoogleCallback: (queryParams: Record<string, string>) => Promise<Customer>;
+  validateGoogleCallback: (queryParams: Record<string, string>) => Promise<GoogleCallbackResult>;
+  createGoogleCustomer: (callbackToken: string) => Promise<Customer>;
+  completeGoogleLogin: (callbackToken: string) => Promise<Customer>;
   logout: () => void;
   requestPasswordReset: (email: string) => Promise<void>;
   updatePassword: (email: string, password: string, resetToken: string) => Promise<void>;
@@ -192,12 +200,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [fetchCustomer]);
 
-  // Google OAuth: Step 2 - Handle callback from Google
-  const handleGoogleCallback = useCallback(
-    async (queryParams: Record<string, string>): Promise<Customer> => {
-      // Send callback to validate with Medusa
-      const callbackResponse = await api.post<AuthResponse>("/auth/customer/google/callback", queryParams);
+  // Google OAuth: Step 2 - Validate callback from Google (returns token and whether customer needs to be created)
+  const validateGoogleCallback = useCallback(
+    async (queryParams: Record<string, string>): Promise<GoogleCallbackResult> => {
+      // Build query string from all params received from Google
+      const queryString = new URLSearchParams(queryParams).toString();
+
+      // Send callback to validate with Medusa - pass query params as URL query string
+      const callbackResponse = await api.post<AuthResponse>(`/auth/customer/google/callback?${queryString}`, {});
       const authToken = callbackResponse.data.token;
+
+      if (!authToken) {
+        throw new Error("No token received from callback");
+      }
 
       // Decode token to check if customer exists
       const decoded = decodeToken<DecodedToken>(authToken);
@@ -207,82 +222,93 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // If actor_id is empty, customer needs to be created
-      const shouldCreateCustomer = !decoded.actor_id || decoded.actor_id === "";
+      const needsCustomerCreation = !decoded.actor_id || decoded.actor_id === "";
 
-      if (shouldCreateCustomer) {
-        // Create customer with data from Google
-        const email = decoded.user_metadata?.email;
-        const firstName = decoded.user_metadata?.given_name || decoded.user_metadata?.name?.split(" ")[0] || "";
-        const lastName = decoded.user_metadata?.family_name || decoded.user_metadata?.name?.split(" ").slice(1).join(" ") || "";
-
-        if (!email) {
-          throw new Error("Email not provided by Google");
-        }
-
-        // Create customer
-        await axios.post(
-          `${BASE_URL}/store/customers`,
-          {
-            email,
-            first_name: firstName,
-            last_name: lastName,
-          },
-          {
-            headers: {
-              "x-publishable-api-key": API_KEY,
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${authToken}`,
-            },
-          }
-        );
-
-        // Refresh token to get updated token with customer data
-        const refreshResponse = await axios.post<AuthResponse>(
-          `${BASE_URL}/auth/token/refresh`,
-          {},
-          {
-            headers: {
-              "x-publishable-api-key": API_KEY,
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${authToken}`,
-            },
-          }
-        );
-
-        const finalToken = refreshResponse.data.token;
-        setStoredToken(finalToken);
-        setToken(finalToken);
-
-        // Fetch customer data
-        const customerResponse = await axios.get<CustomerResponse>(`${BASE_URL}/store/customers/me`, {
-          headers: {
-            "x-publishable-api-key": API_KEY,
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${finalToken}`,
-          },
-        });
-
-        setCustomer(customerResponse.data.customer);
-        return customerResponse.data.customer;
-      }
-
-      // Customer already exists, just store token and fetch data
-      setStoredToken(authToken);
-      setToken(authToken);
-
-      const customerResponse = await axios.get<CustomerResponse>(`${BASE_URL}/store/customers/me`, {
-        headers: {
-          "x-publishable-api-key": API_KEY,
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-
-      setCustomer(customerResponse.data.customer);
-      return customerResponse.data.customer;
+      return {
+        token: authToken,
+        needsCustomerCreation,
+      };
     },
     []
   );
+
+  // Google OAuth: Step 3a - Create customer with data from decoded token (for new users)
+  const createGoogleCustomer = useCallback(async (callbackToken: string): Promise<Customer> => {
+    // Decode token to extract user metadata
+    const decoded = decodeToken<DecodedToken>(callbackToken);
+
+    if (!decoded || !decoded.user_metadata) {
+      throw new Error("Failed to decode token or missing user metadata");
+    }
+
+    const { email, given_name, family_name } = decoded.user_metadata;
+
+    if (!email) {
+      throw new Error("Email not found in token");
+    }
+
+    // Create customer with data from token
+    await axios.post(
+      `${BASE_URL}/store/customers`,
+      {
+        email,
+        first_name: given_name || "",
+        last_name: family_name || "",
+      },
+      {
+        headers: {
+          "x-publishable-api-key": API_KEY,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${callbackToken}`,
+        },
+      }
+    );
+
+    // Refresh token to get updated token with customer data
+    const refreshResponse = await axios.post<AuthResponse>(
+      `${BASE_URL}/auth/token/refresh`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${callbackToken}`,
+        },
+      }
+    );
+
+    const finalToken = refreshResponse.data.token;
+    setStoredToken(finalToken);
+    setToken(finalToken);
+
+    // Fetch customer data
+    const customerResponse = await axios.get<CustomerResponse>(`${BASE_URL}/store/customers/me`, {
+      headers: {
+        "x-publishable-api-key": API_KEY,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${finalToken}`,
+      },
+    });
+
+    setCustomer(customerResponse.data.customer);
+    return customerResponse.data.customer;
+  }, []);
+
+  // Google OAuth: Step 3b - Complete login for existing customers
+  const completeGoogleLogin = useCallback(async (callbackToken: string): Promise<Customer> => {
+    // Customer already exists, just store token and fetch data
+    setStoredToken(callbackToken);
+    setToken(callbackToken);
+
+    const customerResponse = await axios.get<CustomerResponse>(`${BASE_URL}/store/customers/me`, {
+      headers: {
+        "x-publishable-api-key": API_KEY,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${callbackToken}`,
+      },
+    });
+
+    setCustomer(customerResponse.data.customer);
+    return customerResponse.data.customer;
+  }, []);
 
   const logout = useCallback(() => {
     clearStoredToken();
@@ -319,7 +345,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       login,
       loginWithGoogle,
-      handleGoogleCallback,
+      validateGoogleCallback,
+      createGoogleCustomer,
+      completeGoogleLogin,
       logout,
       requestPasswordReset,
       updatePassword,
@@ -333,7 +361,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       login,
       loginWithGoogle,
-      handleGoogleCallback,
+      validateGoogleCallback,
+      createGoogleCustomer,
+      completeGoogleLogin,
       logout,
       requestPasswordReset,
       updatePassword,

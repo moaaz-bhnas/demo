@@ -1,8 +1,8 @@
 import axios from "axios";
 
-export const BASE_URL = "https://backend-production-f59a.up.railway.app";
-export const API_KEY = "pk_a48bcdbf4f1f8197a35e99cde5374e470989ecd9e34d0b101a0cdbb908c83c3d";
-export const DEFAULT_REGION_ID = "reg_01JVS99K21H4M6E2DN639Q9NXG";
+export const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+export const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
+export const DEFAULT_REGION_ID = process.env.NEXT_PUBLIC_DEFAULT_REGION_ID;
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -16,4 +16,3 @@ export const fetcher = async <T>(url: string): Promise<T> => {
   const response = await api.get<T>(url);
   return response.data;
 };
-
