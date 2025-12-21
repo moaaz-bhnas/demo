@@ -262,23 +262,104 @@ export interface CartItem {
 // Address
 export interface Address {
   id?: string;
+  customer_id?: string | null;
   first_name: string;
   last_name: string;
   address_1: string;
-  address_2?: string;
-  company?: string;
-  postal_code?: string;
+  address_2?: string | null;
+  company?: string | null;
+  postal_code?: string | null;
   city: string;
   country_code: string;
-  province?: string;
+  province?: string | null;
   phone: string;
+  metadata?: Record<string, unknown> | null;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+}
+
+// Shipping Method Detail
+export interface ShippingMethodDetail {
+  id: string;
+  version: number;
+  order_id: string;
+  return_id: string | null;
+  exchange_id: string | null;
+  claim_id: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  shipping_method_id: string;
 }
 
 // Shipping Method
 export interface ShippingMethod {
   id: string;
   name: string;
+  description: string | null;
+  is_tax_inclusive: boolean;
+  is_custom_amount: boolean;
+  shipping_option_id: string;
+  data: Record<string, unknown>;
+  metadata: Record<string, unknown> | null;
+  raw_amount: {
+    value: string;
+    precision: number;
+  };
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  tax_lines: unknown[];
+  adjustments: unknown[];
   amount: number;
+  order_id: string;
+  detail: ShippingMethodDetail;
+  subtotal: number;
+  total: number;
+  original_subtotal: number;
+  original_total: number;
+  discount_total: number;
+  discount_subtotal: number;
+  discount_tax_total: number;
+  tax_total: number;
+  original_tax_total: number;
+  raw_subtotal: {
+    value: string;
+    precision: number;
+  };
+  raw_total: {
+    value: string;
+    precision: number;
+  };
+  raw_original_subtotal: {
+    value: string;
+    precision: number;
+  };
+  raw_original_total: {
+    value: string;
+    precision: number;
+  };
+  raw_discount_total: {
+    value: string;
+    precision: number;
+  };
+  raw_discount_subtotal: {
+    value: string;
+    precision: number;
+  };
+  raw_discount_tax_total: {
+    value: string;
+    precision: number;
+  };
+  raw_tax_total: {
+    value: string;
+    precision: number;
+  };
+  raw_original_tax_total: {
+    value: string;
+    precision: number;
+  };
 }
 
 // Shipping Option
@@ -589,6 +670,9 @@ export interface CustomerOrder {
   shipping_methods?: ShippingMethod[];
   payment_collections?: PaymentCollection[];
   fulfillments?: unknown[];
+  cart?: {
+    id: string;
+  };
 }
 
 // Auth Response
@@ -625,4 +709,64 @@ export interface AddressesResponse {
   count: number;
   offset: number;
   limit: number;
+}
+
+// Return Reason
+export interface ReturnReason {
+  id: string;
+  value: string;
+  label: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Return Item
+export interface ReturnItem {
+  id: string;
+  quantity: number;
+  received_quantity: number;
+  damaged_quantity: number;
+  item_id: string;
+  return_id: string;
+}
+
+// Return
+export interface Return {
+  id: string;
+  display_id: number;
+  order_id: string;
+  created_at: string;
+  canceled_at: string | null;
+  received_at: string | null;
+  items: ReturnItem[];
+}
+
+// Return Reasons Response
+export interface ReturnReasonsResponse {
+  return_reasons: ReturnReason[];
+  count: number;
+  offset: number;
+  limit: number;
+}
+
+// Return Response
+export interface ReturnResponse {
+  return: Return;
+}
+
+// Create Return Request
+export interface CreateReturnRequest {
+  order_id: string;
+  items: {
+    id: string;
+    quantity: number;
+    reason_id?: string;
+    note?: string;
+  }[];
+  return_shipping: {
+    option_id: string;
+    price?: number;
+  };
+  note?: string;
+  location_id?: string;
 }

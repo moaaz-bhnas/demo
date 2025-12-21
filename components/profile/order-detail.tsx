@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, RotateCcw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,15 +11,17 @@ import { Separator } from "@/components/ui/separator";
 import { useOrder, useOrders } from "@/hooks/use-orders";
 import { WithSkeleton } from "@/components/with-skeleton";
 import { OrderDetailSkeleton } from "@/components/skeleton/profile-skeleton";
+import { ReturnDialog } from "./return-dialog";
 
 interface OrderDetailProps {
   orderId: string;
 }
 
 export function OrderDetail({ orderId }: OrderDetailProps) {
-  const { order, isLoading } = useOrder(orderId);
+  const { order, isLoading, mutate } = useOrder(orderId);
   const { cancelOrder } = useOrders();
   const [isCanceling, setIsCanceling] = useState(false);
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
 
   const handleCancel = async () => {
     if (!confirm("Are you sure you want to cancel this order?")) return;
@@ -38,6 +40,11 @@ export function OrderDetail({ orderId }: OrderDetailProps) {
     order?.fulfillment_status === "not_fulfilled" &&
     order?.status !== "canceled";
 
+  const canReturn =
+    order?.fulfillment_status === "delivered" &&
+    order?.status !== "canceled" &&
+    order?.items?.length > 0;
+
   return (
     <WithSkeleton isLoading={isLoading} skeleton={<OrderDetailSkeleton />}>
       {order && (
@@ -51,7 +58,9 @@ export function OrderDetail({ orderId }: OrderDetailProps) {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-2xl font-bold">Order #{order.display_id}</h1>
+                <h1 className="text-2xl font-bold">
+                  Order #{order.display_id}
+                </h1>
                 <p className="text-sm text-muted-foreground">
                   Placed on{" "}
                   {new Date(order.created_at).toLocaleDateString("en-US", {
@@ -62,16 +71,29 @@ export function OrderDetail({ orderId }: OrderDetailProps) {
                 </p>
               </div>
             </div>
-            {canCancel && (
-              <Button
-                variant="destructive"
-                onClick={handleCancel}
-                disabled={isCanceling}
-              >
-                {isCanceling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Cancel Order
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {canReturn && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsReturnDialogOpen(true)}
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Request Return
+                </Button>
+              )}
+              {canCancel && (
+                <Button
+                  variant="destructive"
+                  onClick={handleCancel}
+                  disabled={isCanceling}
+                >
+                  {isCanceling && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Cancel Order
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Status */}
@@ -199,9 +221,18 @@ export function OrderDetail({ orderId }: OrderDetailProps) {
               </Card>
             )}
           </div>
+
+          {/* Return Dialog */}
+          {order && (
+            <ReturnDialog
+              order={order}
+              open={isReturnDialogOpen}
+              onOpenChange={setIsReturnDialogOpen}
+              onSuccess={() => mutate()}
+            />
+          )}
         </div>
       )}
     </WithSkeleton>
   );
 }
-

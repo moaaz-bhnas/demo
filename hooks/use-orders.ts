@@ -3,7 +3,11 @@
 import useSWR from "swr";
 import { useCallback } from "react";
 import { useAuth, getAuthenticatedApi } from "./use-auth";
-import type { CustomerOrder, OrdersResponse, SingleOrderResponse } from "@/lib/types";
+import type {
+  CustomerOrder,
+  OrdersResponse,
+  SingleOrderResponse,
+} from "@/lib/types";
 
 export function useOrders() {
   const { isAuthenticated } = useAuth();
@@ -53,8 +57,10 @@ export function useOrder(orderId: string | null) {
     return response.data;
   };
 
-  const { data, error, isLoading } = useSWR<SingleOrderResponse>(
-    isAuthenticated && orderId ? `/store/orders/${orderId}` : null,
+  const { data, error, isLoading, mutate } = useSWR<SingleOrderResponse>(
+    isAuthenticated && orderId
+      ? `/store/orders/${orderId}?fields=+cart.id`
+      : null,
     fetcher
   );
 
@@ -62,6 +68,6 @@ export function useOrder(orderId: string | null) {
     order: data?.order,
     isLoading,
     isError: error,
+    mutate,
   };
 }
-
