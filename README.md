@@ -516,6 +516,76 @@ GET /store/brands
 GET /store/brands/{brand_id}
 ```
 
+**Response:**
+
+```json
+{
+  "brand": {
+    "id": "brand_01abc...",
+    "name": "Brand Name",
+    "description": "Brand description",
+    "image": "https://...",
+    "tag_id": "ptag_01...",
+    "created_at": "2024-01-01T00:00:00.000Z",
+    "updated_at": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+---
+
+### Brand Page Integration
+
+To display a brand page with its products:
+
+1. **Fetch the brand details:**
+
+   ```http
+   GET /store/brands/{brand_id}
+   ```
+
+2. **Use the `tag_id` from the brand to fetch products:**
+   ```http
+   GET /store/products?tag_id={brand.tag_id}&fields=*variants.calculated_price,*sales
+   ```
+
+**Example Flow:**
+
+```typescript
+// Step 1: Get brand details
+const brandResponse = await fetch(`${API_BASE_URL}/store/brands/${brandId}`, {
+  headers: {
+    "x-publishable-api-key": API_KEY,
+    "Content-Type": "application/json",
+  },
+});
+const { brand } = await brandResponse.json();
+
+// Step 2: If brand has a tag_id, fetch products with that tag
+if (brand.tag_id) {
+  const productsResponse = await fetch(
+    `${API_BASE_URL}/store/products?tag_id=${brand.tag_id}&fields=*variants.calculated_price,*sales`,
+    {
+      headers: {
+        "x-publishable-api-key": API_KEY,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+  const { products } = await productsResponse.json();
+}
+```
+
+**Important Notes:**
+
+- Brands are linked to products via `tag_id`. Not all brands may have a `tag_id` set.
+- Only fetch products if `brand.tag_id` exists.
+- The brand page should display:
+  - Brand image (`brand.image`)
+  - Brand name (`brand.name`)
+  - Brand description (`brand.description`)
+  - Products filtered by the brand's `tag_id`
+
 ---
 
 ### List Product Tags
