@@ -789,6 +789,19 @@ POST /store/carts/{cart_id}
 GET /store/shipping-options?cart_id={cart_id}
 ```
 
+**Query Parameters:**
+| Parameter | Description |
+|-----------|-------------|
+| `cart_id` | Cart ID (required) |
+| `is_return` | Set to `true` to get shipping options for returns (optional, defaults to `false`) |
+
+**For Returns:**
+When requesting shipping options for a return, include `is_return=true`:
+
+```http
+GET /store/shipping-options?cart_id={cart_id}&is_return=true
+```
+
 **Response:**
 
 ```json
@@ -1208,7 +1221,27 @@ DELETE /store/customers/me/wishlists/items/{wishlist_item_id}
 
 ### Returns
 
-#### Get Return Reasons
+The return flow allows customers to request returns for items from their orders. All return endpoints require authentication.
+
+#### Return Flow Overview
+
+1. **Get the order** - Fetch order details to see returnable items
+2. **Get return reasons** - Fetch available return reasons
+3. **Get return shipping options** - Fetch shipping options for returns (using `is_return=true`)
+4. **Create return request** - Submit the return with selected items, reasons, and shipping
+
+#### Step 1: Get Order Details
+
+First, fetch the order to see which items can be returned:
+
+```http
+GET /store/orders/{order_id}?fields=+cart.id
+Authorization: Bearer {token}
+```
+
+**Important:** Include `+cart.id` in the fields to get the cart ID, which is needed for return shipping options.
+
+#### Step 2: Get Return Reasons
 
 ```http
 GET /store/return-reasons
@@ -1239,7 +1272,37 @@ GET /store/return-reasons
 }
 ```
 
-#### Create Return Request
+#### Step 3: Get Return Shipping Options
+
+Use the shipping options endpoint with `is_return=true` to get shipping methods available for returns:
+
+```http
+GET /store/shipping-options?cart_id={cart_id}&is_return=true
+```
+
+**Response:**
+
+```json
+{
+  "shipping_options": [
+    {
+      "id": "so_return_01...",
+      "name": "Return Shipping",
+      "price_type": "flat_rate",
+      "amount": 0,
+      "is_tax_inclusive": true,
+      "calculated_price": {
+        "calculated_amount": 0,
+        "currency_code": "egp"
+      }
+    }
+  ]
+}
+```
+
+**Note:** The `cart_id` comes from the order's `cart.id` field (see Step 1).
+
+#### Step 4: Create Return Request
 
 ```http
 POST /store/returns
@@ -1266,6 +1329,111 @@ Authorization: Bearer {token}
   "note": "Please process my return",
   "location_id": "loc_01..."
 }
+```
+
+**Request Fields:**
+
+| Field                       | Type   | Required | Description                                                      |
+| --------------------------- | ------ | -------- | ---------------------------------------------------------------- |
+| `order_id`                  | string | Yes      | The order ID to return items from                                |
+| `items`                     | array  | Yes      | Array of items to return                                         |
+| `items[].id`                | string | Yes      | Order item ID                                                    |
+| `items[].quantity`          | number | Yes      | Quantity to return (must be ≤ item quantity)                     |
+| `items[].reason_id`         | string | Yes      | Return reason ID from `/store/return-reasons`                    |
+| `items[].note`              | string | No       | Optional note for this specific item                             |
+| `return_shipping`           | object | Yes      | Shipping option for the return                                   |
+| `return_shipping.option_id` | string | Yes      | Shipping option ID from `/store/shipping-options?is_return=true` |
+| `return_shipping.price`     | number | No       | Optional price override                                          |
+| `note`                      | string | No       | General note about the return                                    |
+| `location_id`               | string | No       | Optional location ID                                             |
+
+**Response:**
+
+```json
+{
+  "return": {
+    "id": "return_01abc...",
+    "display_id": 1001,
+    "order_id": "order_01abc...",
+    "created_at": "2024-01-15T10:30:00.000Z",
+    "canceled_at": null,
+    "received_at": null,
+    "items": [
+      {
+        "id": "ritem_01...",
+        "quantity": 1,
+        "received_quantity": 0,
+        "damaged_quantity": 0,
+        "item_id": "item_01abc...",
+        "return_id": "return_01abc..."
+      }
+    ]
+  }
+}
+```
+
+#### Complete Return Flow Example
+
+```typescript
+// Step 1: Get order with cart ID
+const orderResponse = await fetch(
+  `${API_BASE_URL}/store/orders/${orderId}?fields=+cart.id`,
+  {
+    headers: {
+      "x-publishable-api-key": API_KEY,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  }
+);
+const { order } = await orderResponse.json();
+
+// Step 2: Get return reasons
+const reasonsResponse = await fetch(`${API_BASE_URL}/store/return-reasons`, {
+  headers: {
+    "x-publishable-api-key": API_KEY,
+    "Content-Type": "application/json",
+  },
+});
+const { return_reasons } = await reasonsResponse.json();
+
+// Step 3: Get return shipping options
+const shippingResponse = await fetch(
+  `${API_BASE_URL}/store/shipping-options?cart_id=${order.cart.id}&is_return=true`,
+  {
+    headers: {
+      "x-publishable-api-key": API_KEY,
+      "Content-Type": "application/json",
+    },
+  }
+);
+const { shipping_options } = await shippingResponse.json();
+
+// Step 4: Create return request
+const returnResponse = await fetch(`${API_BASE_URL}/store/returns`, {
+  method: "POST",
+  headers: {
+    "x-publishable-api-key": API_KEY,
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    order_id: order.id,
+    items: [
+      {
+        id: order.items[0].id,
+        quantity: 1,
+        reason_id: return_reasons[0].id,
+        note: "Item arrived damaged",
+      },
+    ],
+    return_shipping: {
+      option_id: shipping_options[0].id,
+    },
+    note: "Please process my return",
+  }),
+});
+const { return: returnRequest } = await returnResponse.json();
 ```
 
 ---
